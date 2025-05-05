@@ -2,6 +2,8 @@ import socket
 import json
 import os
 import hashlib
+import threading
+import time
 
 TRACKER_HOST = "localhost"
 TRACKER_PORT = 5000
@@ -29,14 +31,18 @@ def register():
     print(res["message"])
 
 
-def login():
+def login() -> tuple[str | None, str | None]:
     user = input("Usuário: ")
     pwd = input("Senha: ")
     res = send_request({"type": "login", "username": user, "password": pwd})
     print(res["message"])
+    if res["status"] == "success":
+        peer_address = input("Seu endereço público (ex: 192.168.0.101:6000): ")
+        return user, peer_address
+    return None, None
 
 
-def announce_file():
+def announce_file(username, peer_address):
     path = input("Caminho do arquivo: ")
     if not os.path.isfile(path):
         print("Arquivo não encontrado.")
@@ -45,7 +51,6 @@ def announce_file():
     size = os.path.getsize(path)
     hash_ = hash_file(path)
     name = os.path.basename(path)
-    peer_address = input("Endereço do peer (ex: 192.168.0.100:6000): ")
 
     res = send_request(
         {
@@ -54,6 +59,7 @@ def announce_file():
             "size": size,
             "hash": hash_,
             "peer_address": peer_address,
+            "username": username,
         }
     )
 
@@ -66,24 +72,58 @@ def list_files():
         print(f"{f['filename']} ({f['size']} bytes) [{len(f['peers'])} peers]")
 
 
-def main():
+def list_peers():
+    res = send_request({"type": "list_active_peers"})
+    for peer in res.get("peers", []):
+        print(f"{peer['username']} @ {peer['address']}")
+
+
+def heartbeat_loop(username, peer_address):
     while True:
-        print("\n1. Registrar")
+        send_request(
+            {"type": "heartbeat", "username": username, "peer_address": peer_address}
+        )
+        time.sleep(60)
+
+
+def main():
+    username = None
+    peer_address = None
+
+    while not username:
+        print("\n--- Sistema P2P - Menu Inicial ---")
+        print("1. Registrar")
         print("2. Login")
-        print("3. Anunciar Arquivo")
-        print("4. Listar Arquivos")
         print("0. Sair")
         op = input("> ")
 
         if op == "1":
             register()
         elif op == "2":
-            login()
-        elif op == "3":
-            announce_file()
-        elif op == "4":
-            list_files()
+            username, peer_address = login()
+            if username:
+                threading.Thread(
+                    target=heartbeat_loop, args=(username, peer_address), daemon=True
+                ).start()
         elif op == "0":
+            return
+
+    while True:
+        print(f"\n--- Usuário: {username} ---")
+        print("1. Anunciar Arquivo")
+        print("2. Listar Arquivos")
+        print("3. Listar Peers Ativos")
+        print("0. Sair")
+        op = input("> ")
+
+        if op == "1":
+            announce_file(username, peer_address)
+        elif op == "2":
+            list_files()
+        elif op == "3":
+            list_peers()
+        elif op == "0":
+            print("Saindo...")
             break
 
 
