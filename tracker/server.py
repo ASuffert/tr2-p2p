@@ -4,7 +4,7 @@ import json
 
 from authentication import register_user, login_user
 from files import register_file, list_files
-from tracker.peers import receive_heartbeat, list_active_peers
+from peers import receive_heartbeat, list_active_peers
 
 HOST = "0.0.0.0"
 PORT = 5000

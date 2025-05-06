@@ -2,7 +2,7 @@ import sqlite3
 import hashlib
 import os
 
-from tracker.database import init_db, DB_FILE
+from database import init_db, DB_FILE
 
 
 def hash_password(password: str, salt: str = None):
