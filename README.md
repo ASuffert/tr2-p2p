@@ -12,6 +12,9 @@ Siga estes passos para configurar e executar o projeto em um sistema Linux:
 
 1. Execute `python3 -m venv tr2_p2p`
 2. Execute `source tr2_p2p/bin/activate`
+3. Execute `python3 ./tracker/server.py`
+4. Em outro terminal, execute `python3 ./peer/client.py`
+5. Teste a interface!
 
 ## Estrutura de Pastas
 
