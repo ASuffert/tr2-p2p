@@ -1,4 +1,4 @@
-# Tr2
+# Teleinformática e Redes 2
 
 ## Introdução
 
