@@ -37,12 +37,12 @@ def login() -> tuple[str | None, str | None]:
     res = send_request({"type": "login", "username": user, "password": pwd})
     print(res["message"])
     if res["status"] == "success":
-        peer_address = input("Seu endereço público (ex: 192.168.0.101:6000): ")
-        return user, peer_address
+        session_token = res["token"]
+        return user, session_token
     return None, None
 
 
-def announce_file(username, peer_address):
+def announce_file(token: str):
     path = input("Caminho do arquivo: ")
     if not os.path.isfile(path):
         print("Arquivo não encontrado.")
@@ -58,37 +58,36 @@ def announce_file(username, peer_address):
             "filename": name,
             "size": size,
             "hash": hash_,
-            "peer_address": peer_address,
-            "username": username,
+            "token": token,
         }
     )
 
     print(res["message"])
 
 
-def list_files():
-    res = send_request({"type": "list_files"})
+def list_files(token: str):
+    res = send_request({"type": "list_files", "token": token})
     for f in res.get("files", []):
         print(f"{f['filename']} ({f['size']} bytes) [{len(f['peers'])} peers]")
 
 
-def list_peers():
-    res = send_request({"type": "list_active_peers"})
+def list_peers(token: str):
+    res = send_request({"type": "list_active_peers", "token": token})
     for peer in res.get("peers", []):
         print(f"{peer['username']} @ {peer['address']}")
 
 
-def heartbeat_loop(username, peer_address):
+def heartbeat_loop(token: str):
     while True:
         send_request(
-            {"type": "heartbeat", "username": username, "peer_address": peer_address}
+            {"type": "heartbeat", "token": token}
         )
         time.sleep(60)
 
 
 def main():
     username = None
-    peer_address = None
+    token = None
 
     while not username:
         print("\n--- Sistema P2P - Menu Inicial ---")
@@ -100,10 +99,10 @@ def main():
         if op == "1":
             register()
         elif op == "2":
-            username, peer_address = login()
+            username, token = login()
             if username:
                 threading.Thread(
-                    target=heartbeat_loop, args=(username, peer_address), daemon=True
+                    target=heartbeat_loop, args=(token,), daemon=True
                 ).start()
         elif op == "0":
             return
@@ -117,11 +116,11 @@ def main():
         op = input("> ")
 
         if op == "1":
-            announce_file(username, peer_address)
+            announce_file(token)
         elif op == "2":
-            list_files()
+            list_files(token)
         elif op == "3":
-            list_peers()
+            list_peers(token)
         elif op == "0":
             print("Saindo...")
             break

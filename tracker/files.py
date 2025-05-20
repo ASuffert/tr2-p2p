@@ -2,7 +2,7 @@ import sqlite3
 from database import DB_FILE, init_db
 
 
-def register_file(file_hash, filename, size, peer_address):
+def register_file(file_hash: str, filename: str, size: int, username: str):
     init_db()
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -15,8 +15,8 @@ def register_file(file_hash, filename, size, peer_address):
 
     # Associar peer ao arquivo
     cursor.execute(
-        "INSERT INTO file_peers (file_hash, peer_address) VALUES (?, ?)",
-        (file_hash, peer_address),
+        "INSERT OR IGNORE INTO file_peers (file_hash, username) VALUES (?, ?)",
+        (file_hash, username),
     )
 
     conn.commit()
@@ -29,7 +29,7 @@ def list_files():
 
     cursor.execute(
         """
-                   SELECT f.filename, f.size, f.hash, group_concat(fp.peer_address)
+                   SELECT f.filename, f.size, f.hash, group_concat(fp.username)
                    FROM files f
                             LEFT JOIN file_peers fp ON f.hash = fp.file_hash
                    GROUP BY f.hash

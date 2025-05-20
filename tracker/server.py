@@ -5,6 +5,7 @@ import json
 from authentication import register_user, login_user
 from files import register_file, list_files
 from peers import receive_heartbeat, list_active_peers
+from session import create_session, validate_session
 
 HOST = "0.0.0.0"
 PORT = 5000
@@ -15,58 +16,76 @@ def handle_client(conn, addr):
         with conn:
             data = conn.recv(8192).decode()
             request = json.loads(data)
+            print(f"[{addr[0]}:{addr[1]}] Request: {request}")
+            if request["type"] not in ["register", "login"]:
+                token = request.get("token")
+                username = validate_session(token)
+                if not username:
+                    conn.sendall(json.dumps({
+                        "status": "error",
+                        "message": "Token inválido ou expirado"
+                    }).encode())
+                    return
 
-            if request["type"] == "register":
-                success, msg = register_user(request["username"], request["password"])
+            request = json.loads(data)
+            req_type = request.get("type")
+            success, msg = False, ""
+            extra_payload = {}
 
-            elif request["type"] == "login":
-                success, msg = login_user(request["username"], request["password"])
+            match req_type:
+                case "register":
+                    success, msg = register_user(request["username"], request["password"])
 
-            elif request["type"] == "register_file":
-                register_file(
-                    request["hash"],
-                    request["filename"],
-                    request["size"],
-                    request["peer_address"],
-                )
-                success, msg = True, "Arquivo registrado com sucesso."
+                case "login":
+                    success, msg = login_user(request["username"], request["password"])
+                    if success:
+                        token = create_session(request["username"])
+                        extra_payload["token"] = token
 
-            elif request["type"] == "list_files":
-                files = list_files()
-                conn.sendall(json.dumps({"status": "success", "files": files}).encode())
-                return
+                case "register_file":
+                    token = request.get("token")
+                    username = validate_session(token)
+                    if not username:
+                        success, msg = False, "Token inválido ou expirado"
+                    else:
+                        register_file(
+                            request["hash"],
+                            request["filename"],
+                            request["size"],
+                            username
+                        )
+                        success, msg = True, "Arquivo registrado com sucesso."
 
-            elif request["type"] == "heartbeat":
-                username = request.get("username")
-                peer_address = request.get("peer_address") or f"{addr[0]}:{addr[1]}"
-                if username:
-                    receive_heartbeat(username, peer_address)
-                    conn.sendall(
-                        json.dumps(
-                            {"status": "success", "message": "heartbeat recebido"}
-                        ).encode()
-                    )
-                else:
-                    conn.sendall(
-                        json.dumps(
-                            {"status": "error", "message": "username ausente"}
-                        ).encode()
-                    )
-                return
+                case "list_files":
+                    files = list_files()
+                    success = True
+                    extra_payload["files"] = files
 
-            elif request["type"] == "list_active_peers":
-                peers = list_active_peers()
-                conn.sendall(json.dumps({"status": "success", "peers": peers}).encode())
-                return
+                case "heartbeat":
+                    token = request.get("token")
+                    username = validate_session(token)
+                    peer_address = f"{addr[0]}:{addr[1]}"
+                    if username:
+                        receive_heartbeat(username, peer_address)
+                        success, msg = True, "heartbeat recebido"
+                    else:
+                        success, msg = False, "Token inválido ou ausente"
+                    # resposta será enviada abaixo
+                case "list_active_peers":
+                    peers = list_active_peers()
+                    success = True
+                    extra_payload["peers"] = peers
 
-            else:
-                success, msg = False, "Requisição inválida."
+                case _:
+                    success, msg = False, "Requisição inválida."
 
-            conn.sendall(
-                json.dumps(
-                    {"status": "success" if success else "error", "message": msg}
-                ).encode()
-            )
+            response = {
+                "status": "success" if success else "error",
+                "message": msg
+            }
+            response.update(extra_payload)
+            print(f"[{addr[0]}:{addr[1]}] Response: {response}")
+            conn.sendall(json.dumps(response).encode()) 
 
     except Exception as e:
         conn.sendall(json.dumps({"status": "error", "message": str(e)}).encode())
