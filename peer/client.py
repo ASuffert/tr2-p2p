@@ -24,17 +24,21 @@ def hash_file(filepath):
     return sha.hexdigest()
 
 
+def hash_password(password: str):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
 def register():
     user = input("Usuário: ")
     pwd = input("Senha: ")
-    res = send_request({"type": "register", "username": user, "password": pwd})
+    res = send_request({"type": "register", "username": user, "password": hash_password(pwd)})
     print(res["message"])
 
 
 def login() -> tuple[str | None, str | None]:
     user = input("Usuário: ")
     pwd = input("Senha: ")
-    res = send_request({"type": "login", "username": user, "password": pwd})
+    res = send_request({"type": "login", "username": user, "password": hash_password(pwd)})
     print(res["message"])
     if res["status"] == "success":
         session_token = res["token"]

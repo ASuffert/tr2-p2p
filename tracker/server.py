@@ -4,8 +4,9 @@ import json
 
 from authentication import register_user, login_user
 from files import register_file, list_files
-from peers import receive_heartbeat, list_active_peers
+from peers import cleanup_loop, receive_heartbeat, list_active_peers
 from session import create_session, validate_session
+from database import init_db
 
 HOST = "0.0.0.0"
 PORT = 5000
@@ -34,7 +35,10 @@ def handle_client(conn, addr):
 
             match req_type:
                 case "register":
-                    success, msg = register_user(request["username"], request["password"])
+                    if not request.get("username") or not request.get("password"):
+                        success, msg = False, "Usuário e senha são obrigatórios"
+                    else:
+                        success, msg = register_user(request["username"], request["password"])
 
                 case "login":
                     success, msg = login_user(request["username"], request["password"])
@@ -63,14 +67,14 @@ def handle_client(conn, addr):
 
                 case "heartbeat":
                     token = request.get("token")
+                    peer_port = request.get("port")
                     username = validate_session(token)
-                    peer_address = f"{addr[0]}:{addr[1]}"
+                    peer_address = f"{addr[0]}:{peer_port}"
                     if username:
                         receive_heartbeat(username, peer_address)
                         success, msg = True, "heartbeat recebido"
                     else:
                         success, msg = False, "Token inválido ou ausente"
-                    # resposta será enviada abaixo
                 case "list_active_peers":
                     peers = list_active_peers()
                     success = True
@@ -92,9 +96,9 @@ def handle_client(conn, addr):
 
 
 def start_server():
-    from database import init_db
-
     init_db()
+
+    threading.Thread(target=cleanup_loop, daemon=True).start()
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
