@@ -20,7 +20,7 @@ Siga estes passos para configurar e executar o projeto em um sistema Linux:
 
 O projeto segue a seguinte estrutura de pastas:
 
-- O diretório `peer/` contém o código cliente do projeto, incluindo a interface de terminal.
+- O diretório `peer/` contém o código cliente do projeto, incluindo a interface na pasta /gui feita no tkinter.
 - O diretório `tracker/` contém os códigos do tracker do projeto, incluindo o código do servidor, banco de dados e peers.
 
 Essa estrutura organizada ajuda a manter o projeto limpo e facilita a manutenção e expansão do código.
