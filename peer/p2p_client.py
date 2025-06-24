@@ -3,7 +3,7 @@ import json
 import threading
 import os
 from queue import Queue
-from chunk_manager import reassemble_file, hash_file
+from .chunk_manager import reassemble_file, hash_file
 
 
 CHUNK_SIZE = 64 * 1024  # 64KB padrão

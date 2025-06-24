@@ -13,7 +13,7 @@ def receive_heartbeat(username, peer_address):
     if username not in peers_online:
         peers_online[username] = {"peer_address": peer_address, "last_seen": time.time(), "first_seen": time.time()}
     else:
-        peers_online[username]["last_seen"] = time.time()
+        peers_online[username].update({"peer_address": peer_address, "last_seen": time.time()})
 
 
 def list_active_peers():

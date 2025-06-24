@@ -80,3 +80,21 @@ def reassemble_file(chunk_dir, output_path):
             with open(chunk_path, 'rb') as cf:
                 out.write(cf.read())
     return True
+
+
+def get_chunks_available(chunk_dir: str, file_hash: str) -> list[int]:
+    file_chunk_dir = os.path.join(chunk_dir, file_hash)
+    if not os.path.isdir(file_chunk_dir):
+        return []
+
+    chunks = []
+    for fname in os.listdir(file_chunk_dir):
+        if "_" not in fname:
+            continue
+        try:
+            index_str, _ = fname.split("_", 1)
+            idx = int(index_str)
+            chunks.append(idx)
+        except ValueError:
+            continue
+    return sorted(chunks)

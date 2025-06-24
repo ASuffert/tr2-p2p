@@ -22,7 +22,7 @@ def reset_db():
 
     print("[*] Limpando banco de dados...")
 
-    tables = ["users", "sessions", "files", "file_peers", "active_peers"]
+    tables = ["users", "sessions", "files", "file_peers", "chat_rooms", "chat_members"]
 
     for table in tables:
         try:
@@ -110,10 +110,6 @@ def register_files_and_chunks(filepaths):
                 dst = os.path.join(chunk_dir_test2, chunk)
                 shutil.copyfile(src, dst)
         half_count = len([c for i, c in enumerate(chunk_list) if i % 2 == 0])
-        cursor.execute("""
-            INSERT OR IGNORE INTO file_peers (file_hash, username)
-            VALUES (?, ?)
-        """, (file_hash, "test2"))
         report[file_hash]["peers"]["test2"] = half_count
 
         chunk_dir_test3 = os.path.join(BASE_DIR, "test3", file_hash)
@@ -123,16 +119,8 @@ def register_files_and_chunks(filepaths):
             src = os.path.join(chunk_dir_test1, chunk)
             dst = os.path.join(chunk_dir_test3, chunk)
             shutil.copyfile(src, dst)
-        cursor.execute("""
-            INSERT OR IGNORE INTO file_peers (file_hash, username)
-            VALUES (?, ?)
-        """, (file_hash, "test3"))
         report[file_hash]["peers"]["test3"] = len(selected)
 
-        cursor.execute("""
-            INSERT OR IGNORE INTO file_peers (file_hash, username)
-            VALUES (?, ?)
-        """, (file_hash, "test4"))
         report[file_hash]["peers"]["test4"] = 0
 
         report[file_hash]["peers"]["test5"] = 0
@@ -150,9 +138,55 @@ def register_files_and_chunks(filepaths):
     return report
 
 
+def populate_chat_rooms():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    salas = [
+        ("SalaDev", "test1"),
+        ("P2PStudy", "test2"),
+        ("OffTopic", "test3")
+    ]
+
+    cursor.executemany("""
+        INSERT INTO chat_rooms (room_name, owner_username)
+        VALUES (?, ?)
+    """, salas)
+
+    cursor.execute("SELECT id, room_name FROM chat_rooms")
+    salas_info = {row[1]: row[0] for row in cursor.fetchall()}
+
+    membros = [
+        # SalaDev
+        (salas_info["SalaDev"], "test1"),
+        (salas_info["SalaDev"], "test2"),
+        (salas_info["SalaDev"], "test3"),
+
+        # P2PStudy
+        (salas_info["P2PStudy"], "test2"),
+        (salas_info["P2PStudy"], "test4"),
+        (salas_info["P2PStudy"], "test5"),
+
+        # OffTopic
+        (salas_info["OffTopic"], "test1"),
+        (salas_info["OffTopic"], "test3"),
+        (salas_info["OffTopic"], "test5")
+    ]
+
+    cursor.executemany("""
+        INSERT INTO chat_members (room_id, username)
+        VALUES (?, ?)
+    """, membros)
+
+    conn.commit()
+    conn.close()
+
+    print("[✓] Salas de chat e membros populados com sucesso.")
+
+
 def launch_gui_for_peer(peer):
     print(f"[*] Iniciando interface para {peer}...")
-    subprocess.Popen(["gnome-terminal", "--title", f"Peer {peer}", "--", sys.executable, "peer/gui.py", peer])
+    subprocess.Popen(["gnome-terminal", "--title", f"Peer {peer}", "--", sys.executable, "peer/gui/main.py", peer])
 
 
 def print_report(report):
@@ -188,9 +222,9 @@ if __name__ == "__main__":
     report = register_files_and_chunks(files)
 
     print_report(report)
+    populate_chat_rooms()
 
     for peer in PEERS:
         launch_gui_for_peer(peer)
 
     print("[✓] Dados de teste populados com sucesso.")
-    input("Pressione Enter para encerrar o script e deixar as GUIs abertas...")

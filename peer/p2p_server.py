@@ -3,26 +3,11 @@ import threading
 import json
 import os
 import time
-from chunk_manager import hash_file
+
+from peer.chat import store_message
+from .chunk_manager import hash_file, get_chunks_available
 
 message_queues = {}
-
-def get_chunks_available(chunk_dir: str, file_hash: str) -> list[int]:
-    file_chunk_dir = os.path.join(chunk_dir, file_hash)
-    if not os.path.isdir(file_chunk_dir):
-        return []
-
-    chunks = []
-    for fname in os.listdir(file_chunk_dir):
-        if "_" not in fname:
-            continue
-        try:
-            index_str, _ = fname.split("_", 1)
-            idx = int(index_str)
-            chunks.append(idx)
-        except ValueError:
-            continue
-    return sorted(chunks)
 
 def handle_client(username: str, conn: socket.socket, addr: tuple, queues: dict):
     base_dir = os.path.expanduser(f"~/p2p-tr2/{username}")
@@ -98,22 +83,7 @@ def handle_client(username: str, conn: socket.socket, addr: tuple, queues: dict)
                 
                 if room_id in queues:
                     queues[room_id].put(message_data)
-                
-                chat_log_dir = os.path.join(base_dir, "chats")
-                os.makedirs(chat_log_dir, exist_ok=True)
-                history_path = os.path.join(chat_log_dir, f"{room_id}.json")
-
-                current_history = []
-                if os.path.exists(history_path):
-                    try:
-                        with open(history_path, 'r', encoding='utf-8') as f:
-                            current_history = json.load(f)
-                    except json.JSONDecodeError:
-                        pass
-                
-                current_history.append(message_data)
-                with open(history_path, 'w', encoding='utf-8') as f:
-                    json.dump(current_history, f, indent=2, ensure_ascii=False)
+                store_message(username, room_id, message_data)
                 
                 conn.sendall(json.dumps({"status": "success"}).encode('utf-8'))
             
@@ -124,7 +94,6 @@ def handle_client(username: str, conn: socket.socket, addr: tuple, queues: dict)
         print(f"[!] Erro ao lidar com cliente P2P {addr}: {e}")
 
 def start_p2p_server(username: str, queues: dict, host="0.0.0.0", port=0) -> int:
-    """Inicia o servidor P2P em uma thread separada."""
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((host, port))
