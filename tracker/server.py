@@ -4,7 +4,7 @@ import json
 
 from authentication import register_user, login_user
 from files import register_file, list_files
-from peers import cleanup_loop, receive_heartbeat, list_active_peers
+from peers import cleanup_loop, receive_heartbeat, list_active_peers, calculate_tier
 from session import create_session, validate_session
 from database import init_db
 
@@ -79,6 +79,13 @@ def handle_client(conn, addr):
                     peers = list_active_peers()
                     success = True
                     extra_payload["peers"] = peers
+                case "get_user_tier":
+                    token = request.get("token")
+                    username = validate_session(token)
+                    tier, max_connections = calculate_tier(username)
+                    success = True
+                    extra_payload["tier"] = tier
+                    extra_payload["max_connections"] = max_connections
 
                 case _:
                     success, msg = False, "Requisição inválida."

@@ -3,7 +3,7 @@ import threading
 import json
 import os
 
-from peer.chunk_manager import hash_file
+from chunk_manager import hash_file
 
 
 def get_chunks_available(chunk_dir: str, file_hash: str) -> list[int]:

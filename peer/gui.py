@@ -8,9 +8,9 @@ import hashlib
 import json
 import socket
 
-from peer.chunk_manager import split_file
-from peer.p2p_client import download_file
-from peer.p2p_server import start_p2p_server
+from chunk_manager import split_file
+from p2p_client import download_file
+from p2p_server import start_p2p_server
 
 TRACKER_HOST = "localhost"
 TRACKER_PORT = 5000
@@ -162,6 +162,13 @@ class P2PApp(tk.Tk):
         messagebox.showinfo("Peers Ativos", texto)
 
     def baixar_arquivo(self):
+        res = send_request({"type": "get_user_tier", "token": self.token})
+        if res["status"] != "success":
+            messagebox.showerror("Erro", res["message"])
+            return
+        max_connections = res["max_connections"]
+        tier = res["tier"]
+
         res = send_request({"type": "list_files", "token": self.token})
         if res["status"] != "success":
             messagebox.showerror("Erro", res["message"])
@@ -172,7 +179,6 @@ class P2PApp(tk.Tk):
             messagebox.showinfo("Info", "Nenhum arquivo disponível no momento.")
             return
 
-        # 2. Mostrar opções para o usuário escolher
         lista = "\n".join([f"{i}. {arq['filename']} ({arq['size']} bytes)" for i, arq in enumerate(arquivos)])
         choice = simpledialog.askinteger("Escolha o Arquivo", f"Selecione o arquivo:\n\n{lista}\n\nDigite o número:")
 
@@ -197,7 +203,9 @@ class P2PApp(tk.Tk):
             return
 
         def run_download():
-            success = download_file(self.username, filename, file_hash, size, [peer["address"] for peer in peers if peer["username"] != self.username])
+            start_time = time.time()
+            success = download_file(self.username, filename, file_hash, size, [peer["address"] for peer in peers if peer["username"] != self.username], max_connections)
+            print("Download took %.3f seconds." % (time.time() - start_time))
             if success:
                 messagebox.showinfo("Download", f"Arquivo {filename} baixado com sucesso.")
             else:

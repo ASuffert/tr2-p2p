@@ -92,7 +92,7 @@ def download_chunk(peer, file_hash, chunk_index, chunk_dir):
         return False
 
 
-def download_file(username, filename, file_hash, size, peers):
+def download_file(username, filename, file_hash, size, peers, max_connections):
     chunk_dir = os.path.expanduser(f"~/p2p-tr2/{username}/{file_hash}")
     output_dir = os.path.expanduser(f"~/p2p-tr2/{username}/arquivos_reconstruidos")
     os.makedirs(chunk_dir, exist_ok=True)
@@ -140,7 +140,8 @@ def download_file(username, filename, file_hash, size, peers):
 
             chunk_queue.task_done()
 
-    num_threads = min(4, len(peers))
+    num_threads = min(max_connections, len(peers))
+    print("Threads used:", num_threads)
     threads = []
     for _ in range(num_threads):
         t = threading.Thread(target=worker, daemon=True)
