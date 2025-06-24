@@ -1,7 +1,4 @@
 import sqlite3
-import hashlib
-import os
-
 from database import init_db, DB_FILE
 
 

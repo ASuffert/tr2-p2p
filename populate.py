@@ -5,7 +5,6 @@ import sqlite3
 import random
 import subprocess
 import sys
-
 from peer.chunk_manager import split_file, hash_file
 
 
@@ -92,20 +91,17 @@ def register_files_and_chunks(filepaths):
             "peers": {}
         }
 
-        # Diretório de chunks completo para 'test1'
         chunk_dir_test1 = os.path.join(BASE_DIR, "test1", file_hash)
         metadata = split_file(filepath, chunk_dir_test1)
 
         chunk_list = sorted([c for c in os.listdir(chunk_dir_test1) if "_" in c])
 
-        # test1 → possui tudo (completo)
         cursor.execute("""
             INSERT OR IGNORE INTO file_peers (file_hash, username)
             VALUES (?, ?)
         """, (file_hash, "test1"))
         report[file_hash]["peers"]["test1"] = len(chunk_list)
 
-        # test2 → metade dos chunks
         chunk_dir_test2 = os.path.join(BASE_DIR, "test2", file_hash)
         os.makedirs(chunk_dir_test2, exist_ok=True)
         for i, chunk in enumerate(chunk_list):
@@ -120,7 +116,6 @@ def register_files_and_chunks(filepaths):
         """, (file_hash, "test2"))
         report[file_hash]["peers"]["test2"] = half_count
 
-        # test3 → alguns chunks aleatórios (~30%)
         chunk_dir_test3 = os.path.join(BASE_DIR, "test3", file_hash)
         os.makedirs(chunk_dir_test3, exist_ok=True)
         selected = random.sample(chunk_list, max(1, len(chunk_list) // 3))
@@ -134,17 +129,14 @@ def register_files_and_chunks(filepaths):
         """, (file_hash, "test3"))
         report[file_hash]["peers"]["test3"] = len(selected)
 
-        # test4 → não tem chunks, mas aparece no tracker
         cursor.execute("""
             INSERT OR IGNORE INTO file_peers (file_hash, username)
             VALUES (?, ?)
         """, (file_hash, "test4"))
         report[file_hash]["peers"]["test4"] = 0
 
-        # test5 → não aparece no tracker (sem registro)
         report[file_hash]["peers"]["test5"] = 0
 
-        # Registra o arquivo na tabela 'files'
         cursor.execute("""
             INSERT OR IGNORE INTO files (hash, filename, size)
             VALUES (?, ?, ?)
@@ -201,3 +193,4 @@ if __name__ == "__main__":
         launch_gui_for_peer(peer)
 
     print("[✓] Dados de teste populados com sucesso.")
+    input("Pressione Enter para encerrar o script e deixar as GUIs abertas...")

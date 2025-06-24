@@ -7,6 +7,7 @@ from files import register_file, list_files
 from peers import cleanup_loop, receive_heartbeat, list_active_peers
 from session import create_session, validate_session
 from database import init_db
+from chat_manager import create_chat_room, delete_chat_room, get_user_chats, add_member_to_chat, get_chat_members_with_addresses, remove_member_from_chat
 
 HOST = "0.0.0.0"
 PORT = 5000
@@ -79,6 +80,46 @@ def handle_client(conn, addr):
                     peers = list_active_peers()
                     success = True
                     extra_payload["peers"] = peers
+
+                case "create_chat_room":
+                    room_name = request.get("room_name")
+                    if not room_name:
+                        success, msg = False, "O nome da sala é obrigatório."
+                    else:
+                        room_id, msg = create_chat_room(room_name, username)
+                        if room_id:
+                            success = True
+                            extra_payload["room_id"] = room_id
+                        else:
+                            success = False
+                
+                case "list_my_chats":
+                    chats = get_user_chats(username)
+                    success = True
+                    extra_payload["chats"] = chats
+
+                case "add_chat_member":
+                    room_id = request.get("room_id")
+                    user_to_add = request.get("user_to_add")
+                    success, msg = add_member_to_chat(room_id, user_to_add, username)
+
+                case "remove_chat_member":
+                    room_id = request.get("room_id")
+                    user_to_remove = request.get("user_to_remove")
+                    success, msg = remove_member_from_chat(room_id, user_to_remove, username)
+
+                case "delete_chat_room":
+                    room_id = request.get("room_id")
+                    success, msg = delete_chat_room(room_id, username)
+                    # Adiciona uma lógica extra para fechar a janela no cliente
+                    if success:
+                        extra_payload["action"] = "close_window"
+
+                case "get_chat_members":
+                    room_id = request.get("room_id")
+                    members = get_chat_members_with_addresses(room_id)
+                    success = True
+                    extra_payload["members"] = members
 
                 case _:
                     success, msg = False, "Requisição inválida."

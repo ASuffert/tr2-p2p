@@ -44,5 +44,27 @@ def init_db():
         )
     """)
 
+    # Tabela de salas de chat
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_name TEXT NOT NULL,
+            owner_username TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(owner_username) REFERENCES users(username)
+        )
+    """)
+
+    # Tabela de associação de membros da sala de chat
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_members (
+            room_id INTEGER,
+            username TEXT,
+            FOREIGN KEY(room_id) REFERENCES chat_rooms(id),
+            FOREIGN KEY(username) REFERENCES users(username),
+            PRIMARY KEY (room_id, username)
+        )
+    """)
+
     conn.commit()
     conn.close()
