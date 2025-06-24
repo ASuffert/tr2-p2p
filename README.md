@@ -16,6 +16,10 @@ Siga estes passos para configurar e executar o projeto em um sistema Linux:
 4. Em outro terminal, execute `python3 populate.py`
 5. Teste a interface!
 
+### Análise de desempenho
+
+- Para a análise de desempenho de download, execute `python3 ./tracker/download.py`
+
 ## Estrutura de Pastas
 
 O projeto segue a seguinte estrutura de pastas:
