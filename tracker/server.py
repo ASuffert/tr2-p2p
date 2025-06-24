@@ -111,7 +111,6 @@ def handle_client(conn, addr):
                 case "delete_chat_room":
                     room_id = request.get("room_id")
                     success, msg = delete_chat_room(room_id, username)
-                    # Adiciona uma lógica extra para fechar a janela no cliente
                     if success:
                         extra_payload["action"] = "close_window"
 

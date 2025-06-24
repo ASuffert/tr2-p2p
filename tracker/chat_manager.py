@@ -80,16 +80,13 @@ def delete_chat_room(room_id, requester_username):
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            # Validação crucial: Apenas o dono pode remover a sala
             cursor.execute("SELECT owner_username FROM chat_rooms WHERE id = ?", (room_id,))
             owner = cursor.fetchone()
             if not owner or owner[0] != requester_username:
                 return False, "Apenas o moderador pode remover a sala."
 
-            # Remove todos os membros da sala primeiro
             cursor.execute("DELETE FROM chat_members WHERE room_id = ?", (room_id,))
             
-            # Remove a sala em si
             cursor.execute("DELETE FROM chat_rooms WHERE id = ?", (room_id,))
             
             conn.commit()
