@@ -1,8 +1,13 @@
+import os
 import sys
 import tkinter as tk
 from tkinter import simpledialog, messagebox, Listbox
 import threading
 import time
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from peer.gui.chats import ChatRoomWindow
 from peer.gui.files import FileManagerWindow

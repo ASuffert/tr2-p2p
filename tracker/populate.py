@@ -6,9 +6,9 @@ import random
 import subprocess
 import sys
 from peer.chunk_manager import split_file, hash_file
+from tracker.files import register_file
 
-
-DB_FILE = "tracker/tracker.db"
+DB_FILE = "tracker.db"
 BASE_DIR = os.path.expanduser("~/p2p-tr2")
 TEST_FILES_DIR = os.path.join(os.path.dirname(__file__), "test_files")
 
@@ -80,7 +80,7 @@ def register_files_and_chunks(filepaths):
 
     print("[*] Registrando arquivos e chunks...")
 
-    for filepath in filepaths:
+    for i, filepath in enumerate(filepaths):
         file_hash = hash_file(filepath)
         file_size = os.path.getsize(filepath)
         filename = os.path.basename(filepath)
@@ -111,6 +111,12 @@ def register_files_and_chunks(filepaths):
                 shutil.copyfile(src, dst)
         half_count = len([c for i, c in enumerate(chunk_list) if i % 2 == 0])
         report[file_hash]["peers"]["test2"] = half_count
+        if i % 2 == 0:
+            cursor.execute("""
+                           INSERT
+                           OR IGNORE INTO file_peers (file_hash, username)
+                        VALUES (?, ?)
+                           """, (file_hash, "test2"))
 
         chunk_dir_test3 = os.path.join(BASE_DIR, "test3", file_hash)
         os.makedirs(chunk_dir_test3, exist_ok=True)
@@ -120,6 +126,12 @@ def register_files_and_chunks(filepaths):
             dst = os.path.join(chunk_dir_test3, chunk)
             shutil.copyfile(src, dst)
         report[file_hash]["peers"]["test3"] = len(selected)
+        if i % 3 == 0:
+            cursor.execute("""
+                           INSERT
+                           OR IGNORE INTO file_peers (file_hash, username)
+                        VALUES (?, ?)
+                           """, (file_hash, "test3"))
 
         report[file_hash]["peers"]["test4"] = 0
 
@@ -186,7 +198,7 @@ def populate_chat_rooms():
 
 def launch_gui_for_peer(peer):
     print(f"[*] Iniciando interface para {peer}...")
-    subprocess.Popen(["gnome-terminal", "--title", f"Peer {peer}", "--", sys.executable, "peer/gui/main.py", peer])
+    subprocess.Popen(["gnome-terminal", "--title", f"Peer {peer}", "--", sys.executable, "../peer/gui/main.py", peer])
 
 
 def print_report(report):

@@ -1,3 +1,4 @@
+import random
 import socket
 import json
 import threading
@@ -34,7 +35,7 @@ def get_chunk_map(peer, file_hash):
     return []
 
 
-def download_chunk(peer, file_hash, chunk_index, chunk_dir):
+def download_chunk(peer, file_hash, chunk_index, chunk_dir, verbose=True):
     try:
         host, port = peer.split(":")
         port = int(port)
@@ -83,8 +84,8 @@ def download_chunk(peer, file_hash, chunk_index, chunk_dir):
                 print(f"[!] Chunk inválido (hash incorreto): {chunk_name}")
                 os.remove(chunk_path)
                 return False
-
-            print(f"[✓] Chunk {chunk_index} baixado de {peer} como {chunk_name}")
+            if verbose:
+                print(f"[✓] Chunk {chunk_index} baixado de {peer} como {chunk_name}")
             return True
 
     except Exception as e:
@@ -92,7 +93,7 @@ def download_chunk(peer, file_hash, chunk_index, chunk_dir):
         return False
 
 
-def download_file(username, filename, file_hash, size, peers, max_connections):
+def download_file(username, filename, file_hash, size, peers, max_connections, verbose=True):
     chunk_dir = os.path.expanduser(f"~/p2p-tr2/{username}/{file_hash}")
     output_dir = os.path.expanduser(f"~/p2p-tr2/{username}/arquivos_reconstruidos")
     os.makedirs(chunk_dir, exist_ok=True)
@@ -103,7 +104,8 @@ def download_file(username, filename, file_hash, size, peers, max_connections):
     chunk_peer_map = {}
     chunk_rarity = {}
 
-    print("[*] Consultando mapa de chunks dos peers...")
+    if verbose:
+        print("[*] Consultando mapa de chunks dos peers...")
 
     for peer in peers:
         available = get_chunk_map(peer, file_hash)
@@ -129,10 +131,10 @@ def download_file(username, filename, file_hash, size, peers, max_connections):
                 chunk_queue.task_done()
                 continue
 
-            peer = peers_with_chunk[0]
+            peer = random.choice(peers_with_chunk)
 
             success = download_chunk(
-                peer, file_hash, chunk, chunk_dir
+                peer, file_hash, chunk, chunk_dir, verbose
             )
 
             if not success:

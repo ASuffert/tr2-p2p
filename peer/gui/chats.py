@@ -73,15 +73,55 @@ class ChatRoomWindow:
         room_menu.add_command(label="Ver Membros", command=self.show_members)
 
     def add_member(self):
-        user_to_add = simpledialog.askstring("Adicionar Membro", "Digite o nome do usuário a ser adicionado:",
-                                             parent=self.window)
-        if user_to_add:
-            if user_to_add == self.username:
-                messagebox.showwarning("Aviso", "Você não pode adicionar a si mesmo.", parent=self.window)
+        window = tk.Toplevel(self.window)
+        window.title("Adicionar Membro")
+        window.geometry("300x400")
+
+        tk.Label(window, text="Selecione um usuário ativo:", font=("Arial", 10)).pack(pady=5)
+
+        user_listbox = tk.Listbox(window)
+        user_listbox.pack(padx=10, pady=5, fill='both', expand=True)
+
+        def refresh_users():
+            res = send_request({"type": "list_active_peers", "token": self.token})
+            active_peers = res.get("peers", [])
+
+            current_members = [m['username'] for m in self.members]
+            candidates = [u for u in active_peers if
+                          u['username'] != self.username and u['username'] not in current_members]
+
+            user_listbox.delete(0, tk.END)
+            user_listbox.users_data = candidates
+
+            for user in candidates:
+                user_listbox.insert(tk.END, f"{user['username']} ({user.get('address', 'Offline')})")
+
+        def confirm_add():
+            selected = user_listbox.curselection()
+            if not selected:
                 return
-            payload = {"type": "add_chat_member", "token": self.token, "room_id": self.room_id,
-                       "user_to_add": user_to_add}
-            threading.Thread(target=self.send_add_member_request, args=(payload,), daemon=True).start()
+            user = user_listbox.users_data[selected[0]]
+            target_username = user['username']
+
+            payload = {
+                "type": "add_chat_member",
+                "token": self.token,
+                "room_id": self.room_id,
+                "user_to_add": target_username
+            }
+            res = send_request(payload)
+
+            if res.get('status') == 'success':
+                messagebox.showinfo("Adicionar Membro", res.get("message"), parent=window)
+                self.fetch_history_and_members()
+                window.destroy()
+            else:
+                messagebox.showerror("Erro", res.get("message", "Erro ao adicionar membro."), parent=window)
+
+        tk.Button(window, text="Atualizar", command=refresh_users).pack(pady=5)
+        tk.Button(window, text="Adicionar", command=confirm_add).pack(pady=5)
+
+        refresh_users()
 
     def remove_member(self):
         user_to_remove = simpledialog.askstring("Remover Membro", "Digite o nome do usuário a ser removido:",
@@ -169,7 +209,7 @@ class ChatRoomWindow:
         try:
             host, port = member['address'].split(':')
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(2);
+                s.settimeout(2)
                 s.connect((host, int(port)))
                 payload = {"type": "broadcast_message", "room_id": self.room_id, "message": message_payload}
                 s.sendall(json.dumps(payload).encode('utf-8'))
@@ -179,10 +219,10 @@ class ChatRoomWindow:
     def display_message(self, msg_data):
         self.chat_box.config(state='normal')
         ts = datetime.datetime.fromtimestamp(msg_data['timestamp']).strftime('%H:%M:%S')
-        sender = msg_data.get('sender', '???');
+        sender = msg_data.get('sender', '???')
         content = msg_data.get('content', '')
         self.chat_box.insert(tk.END, f"[{ts}] {sender}: {content}\n")
-        self.chat_box.config(state='disabled');
+        self.chat_box.config(state='disabled')
         self.chat_box.see(tk.END)
 
     def check_queue(self):

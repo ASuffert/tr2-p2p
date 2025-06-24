@@ -1,6 +1,6 @@
 import sqlite3
-from database import DB_FILE, init_db
-from peers import peers_online
+from tracker.database import DB_FILE, init_db
+from tracker.peers import peers_online
 
 def register_file(file_hash: str, filename: str, size: int, username: str):
     init_db()

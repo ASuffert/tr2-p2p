@@ -17,9 +17,17 @@ class FileManagerWindow(tk.Toplevel):
         self.geometry("700x500")
         self.token = token
         self.username = username
+
+        res = send_request({"type": "get_user_tier", "token": self.token})
+        if res.get("status") == "success":
+            self.tier = f"Tier {res.get('tier')}"
+            self.max_connections = res.get("max_connections")
+        else:
+            self.tier = "Tier desconhecido"
+
         self.files_data = []
 
-        login_status_label = tk.Label(self, text=f"Você está logado como: {self.username}", font=("Arial", 9, "italic"),
+        login_status_label = tk.Label(self, text=f"Você está logado como: {self.username} ({self.tier})", font=("Arial", 9, "italic"),
                                       relief=tk.SUNKEN, anchor='w')
         login_status_label.pack(side=tk.TOP, fill='x', padx=10, pady=(5, 0))
 
@@ -65,7 +73,6 @@ class FileManagerWindow(tk.Toplevel):
         self.files_data = res.get("files", [])
 
         self.files_listbox.delete(0, tk.END)
-        print(self.files_data)
         for f in self.files_data:
             name = f['filename'].ljust(40)
             size = f"{f['size']:,}".rjust(15)
@@ -104,12 +111,6 @@ class FileManagerWindow(tk.Toplevel):
     def _download_file(self, file_data):
         file_hash, filename, total_size = file_data['hash'], file_data['filename'], file_data['size']
 
-        res = send_request({"type": "get_user_tier", "token": self.token})
-        if res["status"] != "success":
-            messagebox.showerror("Erro", res["message"])
-            return
-        max_connections = res["max_connections"]
-
         res = send_request({"type": "list_active_peers", "token": self.token})
         if res["status"] != "success":
             messagebox.showerror("Erro", res["message"])
@@ -123,7 +124,7 @@ class FileManagerWindow(tk.Toplevel):
 
         start_time = time.time()
         success = download_file(self.username, filename, file_hash, total_size,
-                                [peer["address"] for peer in peers if peer["username"] != self.username], max_connections)
+                                [peer["address"] for peer in peers if peer["username"] != self.username], self.max_connections)
         print("Download took %.3f seconds." % (time.time() - start_time))
         if success:
             messagebox.showinfo("Download", f"Arquivo {filename} baixado com sucesso.")

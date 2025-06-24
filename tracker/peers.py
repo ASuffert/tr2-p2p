@@ -1,7 +1,7 @@
 import sqlite3
 import time
 
-from database import DB_FILE
+from tracker.database import DB_FILE
 
 peers_online = {}
 
