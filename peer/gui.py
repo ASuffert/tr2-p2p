@@ -48,6 +48,9 @@ class FileManagerWindow(tk.Toplevel):
         self.username = username
         self.files_data = []
 
+        login_status_label = tk.Label(self, text=f"Você está logado como: {self.username}", font=("Arial", 9, "italic"), relief=tk.SUNKEN, anchor='w')
+        login_status_label.pack(side=tk.TOP, fill='x', padx=10, pady=(5, 0))
+
         top_frame = tk.Frame(self)
         top_frame.pack(pady=5, padx=10, fill='x')
         tk.Button(top_frame, text="Anunciar Novo Arquivo", command=self._announce_file_thread).pack(side='left')
@@ -308,7 +311,7 @@ class P2PClientApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Cliente P2P - Login")
-        self.root.geometry("300x150")
+        self.root.geometry("300x160")
         self.token = None
         self.username = None
         self.p2p_port = None
@@ -320,19 +323,47 @@ class P2PClientApp:
 
     def setup_login_frame(self):
         self.clear_frame()
+        self.root.geometry("300x160")
+        self.root.title("Cliente P2P - Login")
+        
         frame = tk.Frame(self.root)
-        frame.pack(padx=10, pady=10)
+        frame.pack(padx=10, pady=10, fill='both', expand=True)
         
         tk.Label(frame, text="Usuário:").grid(row=0, column=0, sticky="w", pady=2)
         self.user_entry = tk.Entry(frame)
-        self.user_entry.grid(row=0, column=1, pady=2)
+        self.user_entry.grid(row=0, column=1, pady=2, sticky="ew")
 
         tk.Label(frame, text="Senha:").grid(row=1, column=0, sticky="w", pady=2)
         self.pass_entry = tk.Entry(frame, show="*")
-        self.pass_entry.grid(row=1, column=1, pady=2)
+        self.pass_entry.grid(row=1, column=1, pady=2, sticky="ew")
+        
+        frame.grid_columnconfigure(1, weight=1)
 
-        tk.Button(frame, text="Login", command=self.attempt_login).grid(row=2, column=0, columnspan=2, pady=10)
+        button_frame = tk.Frame(frame)
+        button_frame.grid(row=2, column=0, columnspan=2, pady=10)
+
+        login_btn = tk.Button(button_frame, text="Login", command=self.attempt_login)
+        login_btn.pack(side='left', expand=True, padx=5)
+
+        register_btn = tk.Button(button_frame, text="Registrar", command=self.attempt_register)
+        register_btn.pack(side='right', expand=True, padx=5)
+
         self.root.bind('<Return>', lambda event: self.attempt_login())
+
+    def attempt_register(self):
+        user = self.user_entry.get()
+        pwd = self.pass_entry.get()
+        if not user or not pwd:
+            messagebox.showerror("Erro de Registro", "Usuário e senha são obrigatórios.")
+            return
+
+        payload = {"type": "register", "username": user, "password": hash_password(pwd)}
+        res = send_request(payload)
+
+        if res.get("status") == "success":
+            messagebox.showinfo("Registro", res.get("message", "Usuário registrado com sucesso!"))
+        else:
+            messagebox.showerror("Erro de Registro", res.get("message", "Erro desconhecido."))
 
     def attempt_login(self):
         user = self.user_entry.get()
@@ -369,6 +400,7 @@ class P2PClientApp:
         tk.Button(self.root, text="Gerenciador de Arquivos", command=self.show_file_manager).pack(pady=5, ipadx=10)
         tk.Button(self.root, text="Gerenciador de Chat", command=self.show_chat_lobby).pack(pady=5, ipadx=10)
         
+
     def show_chat_lobby(self):
         if 'chat_lobby' in self.opened_windows and self.opened_windows['chat_lobby'].winfo_exists():
             self.opened_windows['chat_lobby'].lift()
@@ -378,6 +410,9 @@ class P2PClientApp:
         self.opened_windows['chat_lobby'] = chat_lobby
         chat_lobby.title("Lobby de Chat")
         chat_lobby.geometry("400x300")
+
+        login_status_label = tk.Label(chat_lobby, text=f"Você está logado como: {self.username}", font=("Arial", 9, "italic"), relief=tk.SUNKEN, anchor='w')
+        login_status_label.pack(side=tk.TOP, fill='x', padx=10, pady=(5, 0))
         
         btn_frame = tk.Frame(chat_lobby)
         btn_frame.pack(pady=5, padx=10, fill='x')
