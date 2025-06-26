@@ -2,13 +2,15 @@ import sqlite3
 from database import DB_FILE
 from peers import peers_online
 
-def create_chat_room(room_name, owner_username):
+def create_chat_room(room_name, owner_username, is_private=0, invited_user=None):
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO chat_rooms (room_name, owner_username) VALUES (?, ?)", (room_name, owner_username))
+            cursor.execute("INSERT INTO chat_rooms (room_name, owner_username, is_private) VALUES (?, ?, ?)", (room_name, owner_username, is_private))
             room_id = cursor.lastrowid
             cursor.execute("INSERT INTO chat_members (room_id, username) VALUES (?, ?)", (room_id, owner_username))
+            if is_private and invited_user:
+                cursor.execute("INSERT INTO chat_members (room_id, username) VALUES (?, ?)", (room_id, invited_user))
             conn.commit()
             return room_id, "Sala criada com sucesso."
     except Exception as e:
@@ -18,12 +20,12 @@ def get_user_chats(username):
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT cr.id, cr.room_name, cr.owner_username
+            SELECT cr.id, cr.room_name, cr.owner_username, cr.is_private
             FROM chat_rooms cr
             JOIN chat_members cm ON cr.id = cm.room_id
             WHERE cm.username = ?
         """, (username,))
-        chats = [{"id": row[0], "name": row[1], "owner": row[2]} for row in cursor.fetchall()]
+        chats = [{"id": row[0], "name": row[1], "owner": row[2], "is_private": bool(row[3])} for row in cursor.fetchall()]
         return chats
 
 def add_member_to_chat(room_id, user_to_add, requester_username):

@@ -90,10 +90,12 @@ def handle_client(conn, addr):
 
                 case "create_chat_room":
                     room_name = request.get("room_name")
+                    is_private = request.get("is_private", 0)
+                    invited_user = request.get("invited_user")
                     if not room_name:
                         success, msg = False, "O nome da sala é obrigatório."
                     else:
-                        room_id, msg = create_chat_room(room_name, username)
+                        room_id, msg = create_chat_room(room_name, username, is_private, invited_user)
                         if room_id:
                             success = True
                             extra_payload["room_id"] = room_id

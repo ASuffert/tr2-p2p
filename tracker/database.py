@@ -50,6 +50,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             room_name TEXT NOT NULL,
             owner_username TEXT NOT NULL,
+            is_private INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(owner_username) REFERENCES users(username)
         )
