@@ -166,13 +166,56 @@ class P2PClientApp:
 
     def create_room(self):
         parent = self.opened_windows.get('chat_lobby')
-        if not parent: return
+        if not parent:
+            return
 
-        room_name = simpledialog.askstring("Nova Sala", "Digite o nome da sala:", parent=parent)
-        if room_name:
-            res = send_request({"type": "create_chat_room", "token": self.token, "room_name": room_name})
-            messagebox.showinfo("Criar Sala", res.get("message"), parent=parent)
-            self.refresh_chat_list()
+        dialog = tk.Toplevel(parent)
+        dialog.title("Tipo de Sala")
+        tk.Label(dialog, text="Escolha o tipo de sala:").pack(padx=10, pady=10)
+
+        def create_public():
+            dialog.destroy()
+            room_name = simpledialog.askstring("Nova Sala Pública", "Digite o nome da sala:", parent=parent)
+            if room_name:
+                res = send_request({"type": "create_chat_room", "token": self.token, "room_name": room_name, "is_private": 0})
+                messagebox.showinfo("Criar Sala", res.get("message"), parent=parent)
+                self.refresh_chat_list()
+
+        def create_private():
+            dialog.destroy()
+            target_window = tk.Toplevel(parent)
+            target_window.title("Criar Sala Privada")
+
+            tk.Label(target_window, text="Selecione um usuário para iniciar o chat privado:", font=("Arial", 10)).pack(pady=5)
+
+            user_listbox = tk.Listbox(target_window)
+            user_listbox.pack(padx=10, pady=5, fill='both', expand=True)
+
+            def refresh_users():
+                res = send_request({"type": "list_active_peers", "token": self.token})
+                active_peers = res.get("peers", [])
+                candidates = [u for u in active_peers if u['username'] != self.username]
+                user_listbox.delete(0, tk.END)
+                user_listbox.users_data = candidates
+                for user in candidates:
+                    user_listbox.insert(tk.END, f"{user['username']} ({user.get('address', 'Offline')})")
+
+            def confirm_private_chat():
+                selected = user_listbox.curselection()
+                if selected:
+                    target_user = user_listbox.users_data[selected[0]]['username']
+                    room_name = f"Privado com {target_user}"
+                    res = send_request({"type": "create_chat_room", "token": self.token, "room_name": room_name, "is_private": 1, "invited_user": target_user})
+                    messagebox.showinfo("Criar Sala", res.get("message"), parent=target_window)
+                    self.refresh_chat_list()
+                    target_window.destroy()
+
+            tk.Button(target_window, text="Atualizar", command=refresh_users).pack(pady=5)
+            tk.Button(target_window, text="Criar Chat Privado", command=confirm_private_chat).pack(pady=5)
+            refresh_users()
+
+        tk.Button(dialog, text="Pública", command=create_public).pack(pady=5, padx=20, fill='x')
+        tk.Button(dialog, text="Privada", command=create_private).pack(pady=5, padx=20, fill='x')
 
     def enter_selected_room(self):
         selected_indices = self.chat_listbox.curselection()

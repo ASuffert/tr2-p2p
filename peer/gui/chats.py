@@ -19,6 +19,7 @@ class ChatRoomWindow:
         self.chat_data = chat_data
         self.room_id = chat_data['id']
         self.owner = chat_data['owner']
+        self.is_private = chat_data.get('is_private', False)
         self.members = []
 
         self.message_queues = message_queues
@@ -48,16 +49,17 @@ class ChatRoomWindow:
 
         send_btn = tk.Button(msg_frame, text="Enviar", command=self.send_message_thread)
         send_btn.pack(side=tk.RIGHT, padx=(5, 0))
-
+                
         if self.username == self.owner:
             admin_frame = tk.Frame(self.window)
             admin_frame.pack(padx=10, pady=(2, 10), fill="x")
 
-            add_member_btn = tk.Button(admin_frame, text="Adicionar Membro", command=self.add_member)
-            add_member_btn.pack(side=tk.LEFT)
+            if not self.is_private:
+                add_member_btn = tk.Button(admin_frame, text="Adicionar Membro", command=self.add_member)
+                add_member_btn.pack(side=tk.LEFT)
 
-            remove_member_btn = tk.Button(admin_frame, text="Remover Membro", command=self.remove_member)
-            remove_member_btn.pack(side=tk.LEFT, padx=5)
+                remove_member_btn = tk.Button(admin_frame, text="Remover Membro", command=self.remove_member)
+                remove_member_btn.pack(side=tk.LEFT, padx=5)
 
             delete_room_btn = tk.Button(admin_frame, text="Remover Sala", command=self.delete_room)
             delete_room_btn.pack(side=tk.LEFT)
